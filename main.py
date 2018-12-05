@@ -1,7 +1,7 @@
 import numpy as np
 from matchingclassifier.MatchingClassifier1D import MatchingClassifier1D
 from matchingclassifier.MatchingClassifier import MatchingClassifier
-from sklearn.svm import LinearSVC
+from sklearn import metrics
 
 # from sklearn.datasets import fetch_openml
 
@@ -25,7 +25,7 @@ mc = MatchingClassifier1D()
 mc.fit_1D(X, c)
 
 y = mc.predict(X)
-# print(metrics.accuracy_score(y, c))
+print(metrics.accuracy_score(y, c))
 
 # X, y = fetch_openml('mnist_784', version=1, return_X_y=True)
 
