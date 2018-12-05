@@ -44,6 +44,11 @@ class MatchingClassifier1D:
         self.threshold, self.coefficient = self.multiclass_optimal_margin(X, c)
 
     def predict(self, data):
+        '''
+
+        :param data: Is a column vector
+        :return:
+        '''
         return np.apply_along_axis(self.get_class, axis=1, arr=data)
 
     def get_class(self, data):
