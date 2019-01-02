@@ -5,6 +5,7 @@ class MatchingClassifier:
     def __init__(self, max_depth=100):
         self.max_depth = max_depth
         self.tree_root = None
+        self.important_dimensions = set()
 
     def fit(self, X, classes):
         self.tree_root = self.build_tree(X, classes, 0, self.max_depth)
@@ -63,8 +64,9 @@ class MatchingClassifier:
             node = DecomposerTree(None, None, None, perc_0 + perc_1, perc_0, perc_1, y.shape[0], label)
             return node
         else:
-            best_perf, best_dimension, best_thr, best_coef, Lx, Rx, Ly, Ry, _, _ = self.pick_best_dimension(x, y)
+            best_perf, best_dimension, best_thr, best_coef, Lx, Rx, Ly, Ry = self.pick_best_dimension(x, y)
             node = DecomposerTree(best_thr, best_coef, best_dimension, best_perf, perc_0, perc_1, y.shape[0], None)
+            self.important_dimensions.add(best_dimension)
             node.left_node = self.build_tree(Lx, Ly, current_depth + 1, max_depth)
             node.right_node = self.build_tree(Rx, Ry, current_depth + 1, max_depth)
             return node
@@ -78,16 +80,15 @@ class MatchingClassifier:
         t0 = m - t1
 
         for i in range(n):
-            if np.var(X[:, i]) == 0:  # Nothing to distinguish
+            if np.var(X[:, i]) == 0:  # Cannot distinguish with no variance
                 continue
-            [thr, coef, perf, marg, per_l0, per_l1] = self.__optimal_discrimination__(X[:, i], Y, t0, t1)
+
+            [thr, coef, perf, marg] = self.__optimal_discrimination__(X[:, i], Y, t0, t1)
             if (perf > best_perf):
                 best_perf = perf
                 best_thr = thr
                 best_coef = coef
                 best_marg = marg
-                best_per_l0 = per_l0
-                best_per_l1 = per_l1
                 best_dimension = i
 
         left_indices = np.where(X[:, best_dimension] <= best_thr)[0]
@@ -98,7 +99,7 @@ class MatchingClassifier:
         LY = Y[left_indices]
         RY = Y[right_indices]
 
-        return best_perf, best_dimension, best_thr, best_coef, LX, RX, LY, RY, best_per_l0, best_per_l1
+        return best_perf, best_dimension, best_thr, best_coef, LX, RX, LY, RY
 
     @staticmethod
     def __optimal_discrimination__(d, c, t0, t1):
@@ -134,21 +135,17 @@ class MatchingClassifier:
 
             if acc1 > perf:  # 0s to the left
                 perf = acc1
-                thr = (ds[i] + ds[i+1])/2.0
+                thr = (ds[i] + ds[i+1]) / 2.0
                 coef = 1
-                marg = abs(ds[i]-ds[i+1])
-                per_l0 = l0
-                per_l1 = l1
+                marg = abs(ds[i] - ds[i+1])
 
-            if acc2 > perf: # 1s to the left
+            if acc2 > perf:  # 1s to the left
                 perf = acc2
                 thr = (ds[i] + ds[i + 1]) / 2.0
                 coef = -1
                 marg = abs(ds[i] - ds[i + 1])
-                per_l0 = l0
-                per_l1 = l1
 
-        #
+
         # n1ls = np.cumsum(cs) # Number of 1s to the left of each value, inclusive
         # n0ls = np.cumsum(-(cs - 1.0)) # Number of 0s to the left of each value, inclusive
         # # Fix for repetitive values
@@ -183,7 +180,7 @@ class MatchingClassifier:
         #     tind = ind2
         perf /= 2.0
         # perf = 1 - perf
-        return thr, coef, perf, marg, per_l0, per_l1
+        return thr, coef, perf, marg
 
 class DecomposerTree:
     def __init__(self, t, c, d, p, l0, l1, n, l):
